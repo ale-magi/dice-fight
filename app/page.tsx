@@ -1,65 +1,151 @@
-import Image from "next/image";
+'use client';
+
+import * as React from 'react';
+import { DICE_FACES } from '@/utils/constants';
+import { Game, type DiceFace } from '@/utils/types';
+import { PlayerSide } from '@/components/game/player';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import { Button } from '@/components/ui/button';
+
+const SHUFFLES = 5;
+const WINNING_SCORE = 15;
+const PLAYERS = ["p1", "p2"];
 
 export default function Home() {
+  const [game, setGame] = React.useState<Game>({
+    start: false,
+    winner: undefined,
+    active: PLAYERS[0],
+    p1: 0,
+    p2: 0
+  })
+
+  const [dice, setDice] = React.useState<DiceFace | undefined>();
+  const [isRolling, setIsRolling] = React.useState(false);
+
+  function rollDice() {
+    setIsRolling(true);
+    return new Promise<void>(r => {
+      let lastExtract = -1;
+      for (let i = 0; i < SHUFFLES; i++) {
+        let extract;
+        do {
+          extract = Math.floor(Math.random() * DICE_FACES.length);
+        } while (extract === lastExtract);
+        
+        lastExtract = extract;
+        
+        setTimeout(
+          () => {
+            setDice(DICE_FACES[extract]);
+            if (i === SHUFFLES - 1) {
+              setIsRolling(false);
+              r();
+            }
+          },
+          (i + 1) * 250
+        );
+      }
+    });
+  }
+
+  function onGameStart() {
+    setGame({
+      ...game,
+      winner: undefined,
+      p1: 0,
+      p2: 0,
+      start: true
+    })
+    setTimeout(() => rollDice(), 200)
+  }
+
+  async function playTurn(recipient: "p1" | "p2") {
+    const value = game.active === recipient ? dice!.value : -dice!.value
+    const newScore = game[recipient] += value
+    const winner = newScore === WINNING_SCORE ? recipient : undefined
+    setGame({
+      ...game,
+      [recipient]: newScore,
+      winner
+    })
+
+    if (winner) return
+
+    await rollDice()
+    nextTurn()
+  }
+
+  function nextTurn() {
+    const currentIndex = PLAYERS.indexOf(game.active);
+    setGame({
+      ...game,
+      active: PLAYERS[(currentIndex + 1) % PLAYERS.length]
+    })
+  }
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <>
+      <div
+        className={`${dice?.color} min-h-dvh flex flex-col items-center justify-center relative`}
+      >
+        <div className="flex row-span-3 items-center col-span-2 justify-center lg:text-[500px] text-[350px]">
+          {dice?.value}
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
+
+        {game.start ? 
+          <>
+            <PlayerSide 
+              disabled={isRolling}
+              active={game.active === "p1"}
+              score={game.p1}
+              onClick={() => playTurn("p1")}
+              className='left-0'
             />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
+            <PlayerSide 
+              disabled={isRolling}
+              active={game.active === "p2"}
+              score={game.p2}
+              onClick={() => playTurn("p2")}
+              className='right-0'
+            />
+          </>
+          : 
+          <div className='flex flex-col items-center gap-5 text-center'>
+            <h1 className='md:text-8xl text-4xl  text-center'>Are you ready?</h1>
+            <Button className="text-3xl italic h-20 w-32" onClick={() => onGameStart()}>
+              YEAH!
+            </Button>
+            <p className='text-2xl'>
+              First player to reach {WINNING_SCORE} wins.<br/>
+              ez.
+            </p>
+          </div>
+        }
+      </div>
+
+      <Dialog open={Boolean(game.winner)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className='text-center'>And the winner is</DialogTitle>
+          </DialogHeader>
+          <DialogDescription className='flex flex-col items-center gap-2 text-6xl !text-black'>
+            <span>
+              {game.winner}
+            </span>
+            {WINNING_SCORE}!!!
+          </DialogDescription>
+          <Button className='bg-red-500 h-24' onClick={() => onGameStart()}>
+            AGAIN
+          </Button>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
