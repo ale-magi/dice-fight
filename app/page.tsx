@@ -12,6 +12,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Button } from '@/components/ui/button';
+import { DynamicDice } from '@/components/game/dice-face';
 
 
 export default function Home() {
@@ -112,7 +113,7 @@ export default function Home() {
         className={`${dice?.color} min-h-dvh flex flex-col items-center justify-center relative`}
       >
         <div className="flex row-span-3 items-center col-span-2 justify-center lg:text-[500px] text-[350px]">
-          {dice?.value}
+          <DynamicDice value={dice?.value}/>
         </div>
 
         {game.start ? 
@@ -151,13 +152,10 @@ export default function Home() {
           <DialogHeader>
             <DialogTitle className='text-center'>And the winner is</DialogTitle>
           </DialogHeader>
-          <DialogDescription className='flex flex-col items-center gap-2 text-6xl !text-black'>
-            <span>
-              {game.winner}
-            </span>
-            {WINNING_SCORE}!!!
+          <DialogDescription className='flex flex-col items-center gap-2 text-6xl uppercase'>
+            {game.winner}
           </DialogDescription>
-          <Button className='bg-red-500 h-24' onClick={() => onGameStart()}>
+          <Button className='h-24 text-3xl' onClick={() => onGameStart()}>
             AGAIN
           </Button>
         </DialogContent>
