@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { DICE_FACES } from '@/utils/constants';
+import { DICE_FACES, PLAYERS, SHUFFLES, WINNING_SCORE } from '@/utils/constants';
 import { Game, type DiceFace } from '@/utils/types';
 import { PlayerSide } from '@/components/game/player';
 import {
@@ -13,9 +13,6 @@ import {
 } from "@/components/ui/dialog"
 import { Button } from '@/components/ui/button';
 
-const SHUFFLES = 5;
-const WINNING_SCORE = 15;
-const PLAYERS = ["p1", "p2"];
 
 export default function Home() {
   const [game, setGame] = React.useState<Game>({
@@ -33,14 +30,25 @@ export default function Home() {
     setIsRolling(true);
     return new Promise<void>(r => {
       let lastExtract = -1;
+      const enemy = PLAYERS.filter(item => item !== game.active)[0] as "p1" | "p2"
+
       for (let i = 0; i < SHUFFLES; i++) {
-        let extract;
+        let extract: number;
         do {
           extract = Math.floor(Math.random() * DICE_FACES.length);
-        } while (extract === lastExtract);
+          // Fix this shit
+          const wouldExceedMaxScore = (game[game.active] + DICE_FACES[extract].value) > WINNING_SCORE
+          const wouldExceedMinScore = (game[enemy] - DICE_FACES[extract].value) < 0
+
+          // IF p1 = 10 and p2 = 5 and dice is 6 Game will be stucked, so se need to reroll dice
+          if (wouldExceedMaxScore && wouldExceedMinScore) {
+            extract = -1
+          }
+        } while (extract === lastExtract || extract === -1);
         
         lastExtract = extract;
         
+        //clear timeouts maybe (?)
         setTimeout(
           () => {
             setDice(DICE_FACES[extract]);
@@ -68,7 +76,13 @@ export default function Home() {
 
   async function playTurn(recipient: "p1" | "p2") {
     const value = game.active === recipient ? dice!.value : -dice!.value
-    const newScore = game[recipient] += value
+    const newScore = game[recipient] + value
+
+    //DO not allow values to go over limits (0 AND 15)
+    if (newScore > WINNING_SCORE || newScore < 0) {
+      return
+    }
+
     const winner = newScore === WINNING_SCORE ? recipient : undefined
     setGame({
       ...game,
@@ -83,10 +97,12 @@ export default function Home() {
   }
 
   function nextTurn() {
-    const currentIndex = PLAYERS.indexOf(game.active);
-    setGame({
-      ...game,
-      active: PLAYERS[(currentIndex + 1) % PLAYERS.length]
+    setGame(prev => {
+      const currentIndex = PLAYERS.indexOf(prev.active);
+      return {
+        ...prev,
+        active: PLAYERS[(currentIndex + 1) % PLAYERS.length]
+      }
     })
   }
 

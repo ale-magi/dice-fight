@@ -8,3 +8,9 @@ export const DICE_FACES: DiceFace[] = [
   { value: 5, color: "bg-[#444783]"},
   { value: 6, color: "bg-[#A2FF00]"},
 ];
+
+export const SHUFFLES = 5;
+export const WINNING_SCORE = 15;
+
+//TODO: types
+export const PLAYERS: ["p1", "p2"] = ["p1", "p2"];
